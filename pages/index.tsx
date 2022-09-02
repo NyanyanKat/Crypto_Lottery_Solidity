@@ -16,7 +16,7 @@ import { ethers } from "ethers";
 import { currency } from "../constants";
 import CountDownTimer from "../components/CountDownTimer";
 import toast from "react-hot-toast";
-import Marquee from 'react-fast-marquee';
+import Marquee from "react-fast-marquee";
 import AdminConrols from "../components/AdminConrols";
 
 const Home: NextPage = () => {
@@ -27,7 +27,6 @@ const Home: NextPage = () => {
   const [quantity, setQuantity] = useState<number>(1);
 
   const [disableBuy, setDisableBuy] = useState<boolean>(false);
-
 
   const { contract, isLoading } = useContract(
     process.env.NEXT_PUBLIC_LOTTERY_CONTRACT_ADDRESS
@@ -52,42 +51,54 @@ const Home: NextPage = () => {
 
   const { data: expiration } = useContractData(contract, "expiration");
 
-  console.log("address", address);
+  // console.log("address", address);
 
   const { data: tickets } = useContractData(contract, "getTickets");
 
   const { mutateAsync: BuyTickets } = useContractCall(contract, "BuyTickets");
 
-  const { data: winnings } = useContractData(contract, "getWinningsForAddress", address);
+  const { data: winnings } = useContractData(
+    contract,
+    "getWinningsForAddress",
+    address
+  );
 
-  const { mutateAsync: WithdrawWinnings } = useContractCall(contract, "WithdrawWinnings");
+  const { mutateAsync: WithdrawWinnings } = useContractCall(
+    contract,
+    "WithdrawWinnings"
+  );
 
   const { data: lastWinner } = useContractData(contract, "lastWinner");
 
-  const { data: lastWinnerAmount } = useContractData(contract, "lastWinnerAmount");
+  const { data: lastWinnerAmount } = useContractData(
+    contract,
+    "lastWinnerAmount"
+  );
 
-  const { data: isLotteryOperator  } = useContractData(contract, "lotteryOperator");
-  
+  const { data: isLotteryOperator } = useContractData(
+    contract,
+    "lotteryOperator"
+  );
 
   useEffect(() => {
     if (!tickets) return;
 
     const totalTickets: string[] = tickets;
-    
-    const noOfUserTickets = totalTickets.reduce((total, ticketAddress)=>(
-      ticketAddress === address? total + 1: total
-    ), 0)
+
+    const noOfUserTickets = totalTickets.reduce(
+      (total, ticketAddress) => (ticketAddress === address ? total + 1 : total),
+      0
+    );
 
     setUserTickets(noOfUserTickets);
-
-  }, [tickets, address])
-
+  }, [tickets, address]);
 
   useEffect(() => {
-     const salesClosed = expiration?.toString() < Date.now().toString() ||
-                    remainingTickets?.toNumber() === 0;
-     setDisableBuy(salesClosed);
-  }, [expiration, remainingTickets])
+    const salesClosed =
+      expiration?.toString() < Date.now().toString() ||
+      remainingTickets?.toNumber() === 0;
+    setDisableBuy(salesClosed);
+  }, [expiration, remainingTickets]);
 
   // console.log(userTickets);
 
@@ -112,29 +123,31 @@ const Home: NextPage = () => {
         id: notification,
       });
     } catch (err) {
-      toast.error("Something went wrong!!!", {
+      toast.error("Oops, Tickets have not been purchased!!!", {
         id: notification,
       });
+
+      console.error("contract call failure", err);
     }
   };
 
   const onWithdrawWinnings = async () => {
-     const notification = toast.loading("Withdrawing winnings...");
-     
-     try {
+    const notification = toast.loading("Withdrawing winnings...");
+
+    try {
       const data = await WithdrawWinnings([{}]);
 
-       toast.success("Winnings withdrawn successfully!!", {
+      toast.success("Winnings withdrawn successfully!!", {
         id: notification,
-       })
-
-     } catch(err) {
-       toast.error("Something went wrong!!", {
+      });
+    } catch (err) {
+      toast.error("Oops, Winnings have not been withdrawn!!", {
         id: notification,
-       })
-     }
+      });
 
-  }
+      console.error("contract call failure", err);
+    }
+  };
 
   if (isLoading) return <Loading />;
 
@@ -151,29 +164,37 @@ const Home: NextPage = () => {
 
         <Marquee className="bg-[#0A1F1C] p-5 mb-5" gradient={false} speed={60}>
           <div className="flex space-x-6 mx-10">
-           <h4 className="text-white font-bold">Last Winner: {lastWinner?.toString()}</h4>
-           <h4 className="text-white font-bold">Previous Winnings: {lastWinnerAmount && ethers.utils.formatEther(lastWinnerAmount.toString())}{" "}
-           {currency}
-           </h4>
+            <h4 className="text-white font-bold">
+              Last Winner: {lastWinner?.toString()}
+            </h4>
+            <h4 className="text-white font-bold">
+              Previous Winnings:{" "}
+              {lastWinnerAmount &&
+                ethers.utils.formatEther(lastWinnerAmount.toString())}{" "}
+              {currency}
+            </h4>
           </div>
         </Marquee>
 
         {isLotteryOperator === address && (
           <div className="flex justify-center">
-            <AdminConrols/>
+            <AdminConrols />
           </div>
         )}
 
         {winnings > 0 && (
           <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto mt-5">
-            <button className="p-5 bg-gradient-to-b from-orange-500 to-emerald-600 animate-pulse text-center rounded-xl w-full"
-            onClick={onWithdrawWinnings}>
-              <p className="font-bold">Winner Winner Chicken Dinner!!</p> 
-              <p>Total Winnings: {ethers.utils.formatEther(winnings.toString())}{" "}
-              {currency}
+            <button
+              className="p-5 bg-gradient-to-b from-orange-500 to-emerald-600 animate-pulse text-center rounded-xl w-full"
+              onClick={onWithdrawWinnings}
+            >
+              <p className="font-bold">Winner Winner Chicken Dinner!!</p>
+              <p>
+                Total Winnings: {ethers.utils.formatEther(winnings.toString())}{" "}
+                {currency}
               </p>
               <br />
-              <p className="font-semibold">Click here to withdraw</p> 
+              <p className="font-semibold">Click here to withdraw</p>
             </button>
           </div>
         )}
@@ -262,10 +283,10 @@ const Home: NextPage = () => {
               <button
                 className="mt-5 w-full bg-gradient-to-br from-orange-500 to-emerald-600 px-10 py-5 rounded-md text-white font-semibold shadow-xl
             disabled:from-gray-600 disabled:text-gray-100 disabled:to-gray-600 disabled:cursor-not-allowed"
-              // disabled={
-              //     expiration?.toString() < Date.now().toString() ||
-              //     remainingTickets?.toNumber() === 0
-              //   }
+                // disabled={
+                //     expiration?.toString() < Date.now().toString() ||
+                //     remainingTickets?.toNumber() === 0
+                //   }
                 disabled={disableBuy}
                 hidden={disableBuy}
                 onClick={handleClick}
@@ -280,15 +301,22 @@ const Home: NextPage = () => {
 
             {userTickets > 0 && (
               <div className="stats">
-                <p className="text-lg mb-2">You have {userTickets} tickets in this draw</p>
+                <p className="text-lg mb-2">
+                  You have {userTickets} tickets in this draw
+                </p>
 
                 <div className="flex max-w-sm flex-wrap gap-x-2 gap-y-2">
-                  {Array(userTickets).fill("").map((_, index) => (
-                    <p 
-                    className="text-emerald-300 h-20 w-12 bg-emerald-500/30 rounded-lg flex flex-shrink-0 
+                  {Array(userTickets)
+                    .fill("")
+                    .map((_, index) => (
+                      <p
+                        className="text-emerald-300 h-20 w-12 bg-emerald-500/30 rounded-lg flex flex-shrink-0 
                     items-center justify-center text-xs italic"
-                    key={index}>{index + 1}</p>
-                  ))}
+                        key={index}
+                      >
+                        {index + 1}
+                      </p>
+                    ))}
                 </div>
               </div>
             )}
@@ -297,17 +325,21 @@ const Home: NextPage = () => {
       </div>
 
       <footer className="border-t border-emerald-500/20 flex items-center text-white justify-between p-5">
-       <img className="h-10 w-10 filter hue-rotate-90 opacity-20 rounded-full" 
-       src="https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492__340.jpg"
-       alt=""/>
-       
-       <p className="text-xs text-emerald-900 pl-5">
-        DISCLAIMER: This project is intended for personal use only. It is not intended to 
-        be a lure to gambling. Instead, the information presented is meant for nothing more than
-        learning and entertainment purposes. We are not liable for any losses that incurred or problems that 
-        arise at online casinos, or elsewhere after the consideration of this project. If you are gambling
-        online utilizing this lottery, you are doing so at your own risk. You have been warned.
-       </p>
+        <img
+          className="h-10 w-10 filter hue-rotate-90 opacity-20 rounded-full"
+          src="https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492__340.jpg"
+          alt=""
+        />
+
+        <p className="text-xs text-emerald-900 pl-5">
+          DISCLAIMER: This project is intended for personal use only. It is not
+          intended to be a lure to gambling. Instead, the information presented
+          is meant for nothing more than learning and entertainment purposes. We
+          are not liable for any losses that incurred or problems that arise at
+          online casinos, or elsewhere after the consideration of this project.
+          If you are gambling online utilizing this lottery, you are doing so at
+          your own risk. You have been warned.
+        </p>
       </footer>
     </div>
   );
