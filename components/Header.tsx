@@ -11,7 +11,8 @@ const Header = () => {
     <header className="grid grid-cols-2 md:grid-cols-5 justify-between items-center p-5">
       <div className="flex items-center space-x-2">
         <img
-          className="rounded-full h-20 w-20"
+          // className="rounded-full h-20 w-20"
+          className="rounded-full h-16 w-24"s
           src="https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492__340.jpg"
           alt=""
         />

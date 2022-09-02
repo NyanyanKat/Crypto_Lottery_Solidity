@@ -11,16 +11,24 @@ import {
 } from "@thirdweb-dev/react";
 import Login from "../components/Login";
 import Loading from "../components/Loading";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { currency } from "../constants";
 import CountDownTimer from "../components/CountDownTimer";
 import toast from "react-hot-toast";
+import Marquee from 'react-fast-marquee';
+import AdminConrols from "../components/AdminConrols";
 
 const Home: NextPage = () => {
   // get user address
   const address = useAddress();
+  const [userTickets, setUserTickets] = useState(0);
+
   const [quantity, setQuantity] = useState<number>(1);
+
+  const [disableBuy, setDisableBuy] = useState<boolean>(false);
+
+
   const { contract, isLoading } = useContract(
     process.env.NEXT_PUBLIC_LOTTERY_CONTRACT_ADDRESS
   );
@@ -46,7 +54,42 @@ const Home: NextPage = () => {
 
   console.log("address", address);
 
+  const { data: tickets } = useContractData(contract, "getTickets");
+
   const { mutateAsync: BuyTickets } = useContractCall(contract, "BuyTickets");
+
+  const { data: winnings } = useContractData(contract, "getWinningsForAddress", address);
+
+  const { mutateAsync: WithdrawWinnings } = useContractCall(contract, "WithdrawWinnings");
+
+  const { data: lastWinner } = useContractData(contract, "lastWinner");
+
+  const { data: lastWinnerAmount } = useContractData(contract, "lastWinnerAmount");
+
+  const { data: isLotteryOperator  } = useContractData(contract, "lotteryOperator");
+  
+
+  useEffect(() => {
+    if (!tickets) return;
+
+    const totalTickets: string[] = tickets;
+    
+    const noOfUserTickets = totalTickets.reduce((total, ticketAddress)=>(
+      ticketAddress === address? total + 1: total
+    ), 0)
+
+    setUserTickets(noOfUserTickets);
+
+  }, [tickets, address])
+
+
+  useEffect(() => {
+     const salesClosed = expiration?.toString() < Date.now().toString() ||
+                    remainingTickets?.toNumber() === 0;
+     setDisableBuy(salesClosed);
+  }, [expiration, remainingTickets])
+
+  // console.log(userTickets);
 
   const handleClick = async () => {
     if (!ticketPrice) return;
@@ -55,11 +98,15 @@ const Home: NextPage = () => {
 
     try {
       // BuyTickets only take an array of objects
-      const data = await BuyTickets([{
-        value: ethers.utils.parseEther(
-          (Number(ethers.utils.formatEther(ticketPrice)) * quantity).toString()
-        ),
-      }]);
+      const data = await BuyTickets([
+        {
+          value: ethers.utils.parseEther(
+            (
+              Number(ethers.utils.formatEther(ticketPrice)) * quantity
+            ).toString()
+          ),
+        },
+      ]);
 
       toast.success("Tickets purchased successfully!", {
         id: notification,
@@ -70,6 +117,24 @@ const Home: NextPage = () => {
       });
     }
   };
+
+  const onWithdrawWinnings = async () => {
+     const notification = toast.loading("Withdrawing winnings...");
+     
+     try {
+      const data = await WithdrawWinnings([{}]);
+
+       toast.success("Winnings withdrawn successfully!!", {
+        id: notification,
+       })
+
+     } catch(err) {
+       toast.error("Something went wrong!!", {
+        id: notification,
+       })
+     }
+
+  }
 
   if (isLoading) return <Loading />;
 
@@ -83,6 +148,35 @@ const Home: NextPage = () => {
 
       <div className="flex-1">
         <Header />
+
+        <Marquee className="bg-[#0A1F1C] p-5 mb-5" gradient={false} speed={60}>
+          <div className="flex space-x-6 mx-10">
+           <h4 className="text-white font-bold">Last Winner: {lastWinner?.toString()}</h4>
+           <h4 className="text-white font-bold">Previous Winnings: {lastWinnerAmount && ethers.utils.formatEther(lastWinnerAmount.toString())}{" "}
+           {currency}
+           </h4>
+          </div>
+        </Marquee>
+
+        {isLotteryOperator === address && (
+          <div className="flex justify-center">
+            <AdminConrols/>
+          </div>
+        )}
+
+        {winnings > 0 && (
+          <div className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto mt-5">
+            <button className="p-5 bg-gradient-to-b from-orange-500 to-emerald-600 animate-pulse text-center rounded-xl w-full"
+            onClick={onWithdrawWinnings}>
+              <p className="font-bold">Winner Winner Chicken Dinner!!</p> 
+              <p>Total Winnings: {ethers.utils.formatEther(winnings.toString())}{" "}
+              {currency}
+              </p>
+              <br />
+              <p className="font-semibold">Click here to withdraw</p> 
+            </button>
+          </div>
+        )}
 
         {/* Next draw box */}
         <div className="space-y-5 md:space-y-0 m-5 md:flex md:flex-row items-start justify-center md:space-x-5">
@@ -131,6 +225,7 @@ const Home: NextPage = () => {
                   type="number"
                   min={1}
                   max={10}
+                  disabled={disableBuy}
                   value={quantity}
                   onChange={(e) => setQuantity(Number(e.target.value))}
                 />
@@ -165,20 +260,55 @@ const Home: NextPage = () => {
               </div>
 
               <button
-                className="mt-5 w-full bg-gradient-to-br from-orange-500 to-emerald-600 px-10 py-5 rounded-md text-white shadow-xl
+                className="mt-5 w-full bg-gradient-to-br from-orange-500 to-emerald-600 px-10 py-5 rounded-md text-white font-semibold shadow-xl
             disabled:from-gray-600 disabled:text-gray-100 disabled:to-gray-600 disabled:cursor-not-allowed"
-                disabled={
-                  expiration?.toString() < Date.now().toString() ||
-                  remainingTickets?.toNumber() === 0
-                }
+              // disabled={
+              //     expiration?.toString() < Date.now().toString() ||
+              //     remainingTickets?.toNumber() === 0
+              //   }
+                disabled={disableBuy}
+                hidden={disableBuy}
                 onClick={handleClick}
               >
-                Buy Tickets
+                Buy {quantity} tickets for{" "}
+                {ticketPrice &&
+                  Number(ethers.utils.formatEther(ticketPrice.toString())) *
+                    quantity}{" "}
+                {currency}
               </button>
             </div>
+
+            {userTickets > 0 && (
+              <div className="stats">
+                <p className="text-lg mb-2">You have {userTickets} tickets in this draw</p>
+
+                <div className="flex max-w-sm flex-wrap gap-x-2 gap-y-2">
+                  {Array(userTickets).fill("").map((_, index) => (
+                    <p 
+                    className="text-emerald-300 h-20 w-12 bg-emerald-500/30 rounded-lg flex flex-shrink-0 
+                    items-center justify-center text-xs italic"
+                    key={index}>{index + 1}</p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      <footer className="border-t border-emerald-500/20 flex items-center text-white justify-between p-5">
+       <img className="h-10 w-10 filter hue-rotate-90 opacity-20 rounded-full" 
+       src="https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492__340.jpg"
+       alt=""/>
+       
+       <p className="text-xs text-emerald-900 pl-5">
+        DISCLAIMER: This project is intended for personal use only. It is not intended to 
+        be a lure to gambling. Instead, the information presented is meant for nothing more than
+        learning and entertainment purposes. We are not liable for any losses that incurred or problems that 
+        arise at online casinos, or elsewhere after the consideration of this project. If you are gambling
+        online utilizing this lottery, you are doing so at your own risk. You have been warned.
+       </p>
+      </footer>
     </div>
   );
 };
