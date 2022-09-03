@@ -292,13 +292,11 @@ const Home: NextPage = () => {
                 onClick={handleClick}
               >
                 {!disableBuy
-                  ? `Buy ${quantity} tickets for{" "}
-                ${
-                  ticketPrice &&
-                  Number(ethers.utils.formatEther(ticketPrice.toString())) *
-                    quantity
-                }{" "}
-                ${currency}`
+                  ? `Buy ${quantity} tickets for ${
+                      ticketPrice &&
+                      Number(ethers.utils.formatEther(ticketPrice.toString())) *
+                        quantity
+                    } ${currency}`
                   : `Ticket Sales are Closed`}
               </button>
             </div>
