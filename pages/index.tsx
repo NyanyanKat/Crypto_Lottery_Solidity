@@ -288,14 +288,18 @@ const Home: NextPage = () => {
                 //     remainingTickets?.toNumber() === 0
                 //   }
                 disabled={disableBuy}
-                hidden={disableBuy}
+                // hidden={disableBuy}
                 onClick={handleClick}
               >
-                Buy {quantity} tickets for{" "}
-                {ticketPrice &&
+                {!disableBuy
+                  ? `Buy ${quantity} tickets for{" "}
+                ${
+                  ticketPrice &&
                   Number(ethers.utils.formatEther(ticketPrice.toString())) *
-                    quantity}{" "}
-                {currency}
+                    quantity
+                }{" "}
+                ${currency}`
+                  : `Ticket Sales are Closed`}
               </button>
             </div>
 
