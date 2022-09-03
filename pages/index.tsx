@@ -292,7 +292,9 @@ const Home: NextPage = () => {
                 onClick={handleClick}
               >
                 {!disableBuy
-                  ? `Buy ${quantity} tickets for ${
+                  ? `Buy ${quantity} ${
+                      quantity > 1 ? "tickets" : "ticket"
+                    } for ${
                       ticketPrice &&
                       Number(ethers.utils.formatEther(ticketPrice.toString())) *
                         quantity
